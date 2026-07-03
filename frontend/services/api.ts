@@ -2,7 +2,7 @@ import axios from "axios";
 import type { UploadResponse, SourceInfo, ChatResponse } from "@/types";
 
 const api = axios.create({
-  baseURL: "http://localhost:8000",
+  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL,
 });
 
 export async function uploadPdf(file: File): Promise<UploadResponse> {
