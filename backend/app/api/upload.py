@@ -11,6 +11,10 @@ from app.config import UPLOADS_DIR
 from app.ingestion.website import process_website
 from app.models.schemas import WebsiteUploadRequest
 
+from app.ingestion.youtube import process_youtube
+from app.models.schemas import YoutubeUploadRequest
+
+
 router = APIRouter(prefix="/upload", tags=["upload"])
 
 
@@ -76,3 +80,30 @@ async def upload_website(request: WebsiteUploadRequest):
         chunk_count=len(result["chunks"]),
         message="Website processed and stored successfully.",
     )
+
+
+@router.post("/youtube", response_model=UploadResponse)
+async def upload_youtube(request: YoutubeUploadRequest):
+    try:
+        result = process_youtube(request.url)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    vectors = embedder.embed_texts(result["chunks"])
+    ids = [f"{result['source_id']}-{i}" for i in range(len(result["chunks"]))]
+
+    vector_store.add_chunks(
+        ids=ids,
+        embeddings=vectors,
+        documents=result["chunks"],
+        metadatas=result["metadatas"],
+    )
+
+    return UploadResponse(
+        source_id=result["source_id"],
+        filename=request.url,
+        chunk_count=len(result["chunks"]),
+        message="YouTube video processed and stored successfully.",
+    )
+
+

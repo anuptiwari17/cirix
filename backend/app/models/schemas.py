@@ -35,3 +35,9 @@ class DeleteResponse(BaseModel):
 
 class WebsiteUploadRequest(BaseModel):
     url: str
+
+
+class YoutubeUploadRequest(BaseModel):
+    url: str
+
+
