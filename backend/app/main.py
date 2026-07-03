@@ -4,7 +4,7 @@ from app.api import upload, chat, sources
 
 
 
-app = FastAPI(title="SourceChat AI")
+app = FastAPI(title="Cirix")
 
 app.add_middleware(
     CORSMiddleware,

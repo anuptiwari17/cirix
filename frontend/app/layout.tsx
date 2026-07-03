@@ -21,7 +21,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SourceChat AI",
+  title: "Cirix",
   description: "Chat with PDFs, websites, and YouTube videos from one place.",
 };
 
