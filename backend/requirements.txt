@@ -3,7 +3,6 @@ uvicorn[standard]
 pydantic
 python-dotenv
 python-multipart
-sentence-transformers
 chromadb
 pymupdf
 trafilatura
@@ -14,5 +13,4 @@ tiktoken
 langchain
 langchain-core
 langchain-chroma
-langchain-huggingface[full]
 langchain-google-genai

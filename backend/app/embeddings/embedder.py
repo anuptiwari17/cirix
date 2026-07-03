@@ -1,8 +1,10 @@
-from langchain_huggingface import HuggingFaceEmbeddings
-from app.config import EMBEDDING_MODEL_NAME
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from app.config import GEMINI_API_KEY
 
-embedder = HuggingFaceEmbeddings(
-    model_name=EMBEDDING_MODEL_NAME,
-    model_kwargs={"model_kwargs": {"low_cpu_mem_usage": False}},
-    encode_kwargs={"normalize_embeddings": True},
+#now i will be using  Gemini's own embedding API. No local model, no torch, no CUDA packages,
+# just an API call, keeps the deployed footprint tiny to keep size under 512 for deployment
+embedder = GoogleGenerativeAIEmbeddings(
+    model="models/gemini-embedding-001",
+    google_api_key=GEMINI_API_KEY,
+    output_dimensionality=768,  #fixed dimension so it stays consistent across the app
 )

@@ -7,7 +7,7 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # --- Models ---
-EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
+EMBEDDING_MODEL_NAME = "models/gemini-embedding-001"
 LLM_MODEL_NAME = "gemini-2.5-flash"
 
 # --- Chunking ---
