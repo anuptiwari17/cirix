@@ -1,9 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
-from app.rag.retriever import retrieve_context
-from app.rag.prompt import build_prompt, format_source_label
-from app.rag.generator import generate_answer
-from app.rag.memory import get_history, add_turn
+from app.rag.chain import run_chat
 from app.models.schemas import ChatRequest, ChatResponse, Citation
 
 router = APIRouter(tags=["chat"])
@@ -11,22 +8,12 @@ router = APIRouter(tags=["chat"])
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-    history = get_history(request.session_id)
-    contexts = retrieve_context(request.question)
+    try:
+        result = run_chat(request.session_id, request.question)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
-    prompt = build_prompt(request.question, contexts, history)
-    answer = generate_answer(prompt)
-
-    add_turn(request.session_id, "user", request.question)
-    add_turn(request.session_id, "assistant", answer)
-
-    citations = [
-        Citation(
-            label=format_source_label(ctx["metadata"]),
-            text=ctx["text"][:200],  # preview only
-            metadata=ctx["metadata"],
-        )
-        for ctx in contexts
-    ]
-
-    return ChatResponse(answer=answer, citations=citations)
+    citations = [Citation(**c) for c in result["citations"]]
+    return ChatResponse(answer=result["answer"], citations=citations)

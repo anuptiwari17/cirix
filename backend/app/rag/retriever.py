@@ -1,22 +1,17 @@
-from app.embeddings.embedder import embedder
-from app.embeddings.vector_store import vector_store
-from app.config import TOP_K_RETRIEVE, TOP_K_CONTEXT
+from app.embeddings.vector_store import get_retriever
+from app.config import TOP_K_CONTEXT
 
 
 def retrieve_context(question: str) -> list[dict]:
     """
-    Embeds the question, searches ChromaDB, and returns the top chunks
-    with their text + metadata, ready to feed into the prompt.
+    Runs similarity search via a fresh LangChain retriever (always bound
+    to the current vector store instance, so it survives clear_all()
+    recreating the underlying collection) and returns chunks in the
+    {text, metadata} shape the rest of the app expects.
     """
-    query_vec = embedder.embed_query(question)
-    results = vector_store.query(query_embedding=query_vec, top_k=TOP_K_RETRIEVE)
+    if not question or not question.strip():
+        return []
 
-    documents = results["documents"][0]
-    metadatas = results["metadatas"][0]
-
-    # Take only the top TOP_K_CONTEXT to keep the prompt tight
-    contexts = []
-    for doc, meta in zip(documents[:TOP_K_CONTEXT], metadatas[:TOP_K_CONTEXT]):
-        contexts.append({"text": doc, "metadata": meta})
-
-    return contexts
+    retriever = get_retriever(TOP_K_CONTEXT)
+    docs = retriever.invoke(question)
+    return [{"text": doc.page_content, "metadata": doc.metadata} for doc in docs]

@@ -12,12 +12,10 @@ print(f"First chunk preview:\n{result['chunks'][0][:200]}")
 print(f"First chunk metadata: {result['metadatas'][0]}")
 
 # Embed and store
-vectors = embedder.embed_texts(result["chunks"])
 ids = [f"{result['source_id']}-{i}" for i in range(len(result["chunks"]))]
 
 vector_store.add_chunks(
     ids=ids,
-    embeddings=vectors,
     documents=result["chunks"],
     metadatas=result["metadatas"],
 )

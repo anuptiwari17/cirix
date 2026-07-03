@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.embeddings.vector_store import vector_store
+from app.embeddings import vector_store
 from app.rag.prompt import format_source_label
 from app.models.schemas import SourceInfo, DeleteResponse
 
