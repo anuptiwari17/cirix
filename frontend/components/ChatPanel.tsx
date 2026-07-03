@@ -33,7 +33,7 @@ export default function ChatPanel({ messages, loading, onSend }: Props) {
 
   return (
     <div className="flex-1 flex flex-col min-w-0">
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4">
         {messages.length === 0 && (
           <p className="text-text-dim text-sm font-mono">
             Add a source, then ask a question.
@@ -52,7 +52,7 @@ export default function ChatPanel({ messages, loading, onSend }: Props) {
         <div ref={bottomRef} />
       </div>
 
-      <div className="border-t border-border p-4 shrink-0">
+      <div className="border-t border-border p-3 md:p-4 shrink-0">
         <div className="flex items-center gap-3 max-w-4xl mx-auto">
           <span className="text-accent font-mono">&gt;</span>
           <input

@@ -13,6 +13,7 @@ interface Props {
   onAddYoutube: (url: string) => Promise<void>;
   onRemove: (sourceId: string) => Promise<void>;
   onReset: () => Promise<void>;
+  onCloseMobile?: () => void;
 }
 
 const TYPE_ICON: Record<string, string> = {
@@ -30,21 +31,32 @@ export default function SourceSidebar({
   onAddYoutube,
   onRemove,
   onReset,
+  onCloseMobile,
 }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
-    <aside className="w-64 shrink-0 border-r border-border flex flex-col">
+    <aside className="w-64 h-full bg-bg shrink-0 border-r border-border flex flex-col">
       <div className="p-4 border-b border-border flex items-center justify-between">
         <h2 className="font-display font-semibold text-sm tracking-wide text-text-dim uppercase">
           Sources
         </h2>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="text-accent text-sm font-mono hover:opacity-80 transition-opacity"
-        >
-          + Add
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setModalOpen(true)}
+            className="text-accent text-sm font-mono hover:opacity-80 transition-opacity"
+          >
+            + Add
+          </button>
+          {onCloseMobile && (
+            <button
+              onClick={onCloseMobile}
+              className="md:hidden text-text-dim hover:text-text transition-colors"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
