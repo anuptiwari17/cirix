@@ -2,17 +2,19 @@
 
 Chat with PDFs, websites, and YouTube videos from one place.
 
-A RAG (Retrieval-Augmented Generation) system built on LangChain's LCEL (LangChain Expression Language), with a hand-written ingestion and chunking layer feeding into a composed, runnable chain, wrapped in a clean, terminal-minimal UI.
+A RAG (Retrieval-Augmented Generation) system built on LangChain's LCEL (LangChain Expression Language), with a hand-written ingestion and chunking layer feeding into a composed, runnable chain, wrapped in a clean, terminal-minimal, mobile-responsive UI.
+
+**Live:** [cirix.vercel.app](https://cirix.vercel.app)
 
 ---
 
 ## What it does
 
-Upload a PDF, paste a website URL, or drop a YouTube link, and Cirix extracts the content, breaks it into chunks, embeds them locally, and stores them in a vector database. Ask a question in plain English, and Cirix retrieves the most relevant chunks across all your sources at once and asks an LLM to answer using only that material, citing exactly which source and location (page number, URL, or timestamp) each claim came from.
+Upload a PDF, paste a website URL, or drop a YouTube link, and Cirix extracts the content, breaks it into chunks, embeds them, and stores them in a vector database. Ask a question in plain English, and Cirix retrieves the most relevant chunks across all your sources at once and asks an LLM to answer using only that material, citing exactly which source and location (page number, URL, or timestamp) each claim came from.
 
 Three completely different content types, a PDF, a webpage, a video transcript, all flow through one identical ingestion pipeline and land in one composed LCEL chain for retrieval and generation. That convergence is the core architectural idea behind this project.
 
-A session starts with a clean slate: landing on the app clears any previous sources before you upload anything new, so every demo run is isolated and predictable.
+A session starts with a clean slate: landing on the app shows a short walkthrough of how it works, and starting a session clears any previous sources before you upload anything new, so every demo run is isolated and predictable.
 
 ---
 
@@ -33,7 +35,7 @@ Chunker (shared, sentence-aware)       (chunker.py, PDF & website only)
 LangChain Chroma vector store          (vector_store.py, embeds + stores in one step)
 ```
 
-Every source type reduces to the same shape, `{ source_id, chunks: [str], metadatas: [dict] }`, the moment it leaves its adapter. From there, `vector_store.add_chunks()` hands raw text straight to a `langchain_chroma.Chroma` instance, which embeds and stores it internally using a shared `HuggingFaceEmbeddings` model. YouTube's adapter groups transcript snippets differently than the shared sentence-chunker (captions arrive as many small pre-timestamped fragments, not one continuous block of text) so that each chunk keeps an accurate timestamp. This is the one deliberate deviation from the shared chunking path.
+Every source type reduces to the same shape, `{ source_id, chunks: [str], metadatas: [dict] }`, the moment it leaves its adapter. From there, `vector_store.add_chunks()` hands raw text straight to a `langchain_chroma.Chroma` instance, which embeds and stores it internally using a shared Gemini embeddings model. YouTube's adapter groups transcript snippets differently than the shared sentence-chunker (captions arrive as many small pre-timestamped fragments, not one continuous block of text) so that each chunk keeps an accurate timestamp. This is the one deliberate deviation from the shared chunking path.
 
 ### Retrieval + generation (LCEL chain)
 
@@ -61,7 +63,7 @@ This is the "runnables and chains" part of the project: `app/rag/chain.py` compo
 
 ### Frontend
 - Next.js 15 (App Router) + TypeScript
-- Tailwind CSS v4
+- Tailwind CSS v4, mobile-responsive layout (slide-out drawers for sources/citations on small screens)
 - Axios
 
 ### Backend
@@ -70,7 +72,7 @@ This is the "runnables and chains" part of the project: `app/rag/chain.py` compo
 ### AI / RAG (LangChain)
 - **Orchestration:** LangChain (LCEL), `langchain`, `langchain-core`
 - **LLM:** Gemini 2.5 Flash via `langchain-google-genai` (`ChatGoogleGenerativeAI`), free tier
-- **Embeddings:** `langchain-huggingface`'s `HuggingFaceEmbeddings`, wrapping `BAAI/bge-small-en-v1.5`, runs locally after a one-time ~130MB download, no per-query cost, no API key required
+- **Embeddings:** Gemini's embedding API via `langchain-google-genai`'s `GoogleGenerativeAIEmbeddings` (`gemini-embedding-001`, 768 dimensions), free tier, no local model loaded
 - **Vector store:** `langchain-chroma`, LangChain's official wrapper around ChromaDB, embedding and storage handled in one step
 - **Memory:** `RunnableWithMessageHistory` with a custom TTL-pruned, in-memory chat history store (per `session_id`, auto-expires after 1 hour of inactivity)
 
@@ -79,6 +81,10 @@ This is the "runnables and chains" part of the project: `app/rag/chain.py` compo
 - **Website:** Trafilatura (primary) with a BeautifulSoup4 fallback if Trafilatura returns nothing
 - **YouTube:** `youtube-transcript-api`, captions only, no audio transcription. Videos without captions return a clean "no captions available" error rather than failing silently.
 
+### Deployment
+- **Backend:** Render (free tier), kept awake via a scheduled GitHub Actions workflow pinging `/health` every 10 minutes
+- **Frontend:** Vercel
+
 **Everything above is free.** No paid APIs, no paid hosting required to run or demo this project.
 
 ---
@@ -86,11 +92,12 @@ This is the "runnables and chains" part of the project: `app/rag/chain.py` compo
 ## Why these specific choices
 
 - **LCEL over manual prompt-building:** composing `prompt | llm | output_parser` with the `|` operator gives a declarative, inspectable pipeline instead of imperative glue code, and `RunnableWithMessageHistory` handles per-session memory without hand-rolling a history dictionary.
-- **`bge-small-en-v1.5` over a bigger embedding model:** small enough (~130MB) to run locally with no GPU, fast enough for a responsive demo, and free-tier friendly.
+- **Gemini embeddings over a locally-loaded HuggingFace model:** the project originally used a local `sentence-transformers` model (`bge-small-en-v1.5`), which works well on a laptop but requires `torch` and pulls in several hundred MB of dependencies, too heavy for a 512MB free-tier deployment container. Switching to Gemini's own embedding API keeps everything free while removing the local-model memory footprint entirely, at the cost of no longer being fully offline.
 - **Gemini 2.5 Flash over Gemini Pro:** Pro models moved to a paid-only tier in April 2026; Flash remains free with a reasonable rate limit and is more than capable of answering from retrieved context rather than doing deep multi-step reasoning.
-- **ChromaDB (via `langchain-chroma`) over a hosted vector DB:** file-based and zero-config, so the entire project runs on a laptop with no external service dependency.
+- **ChromaDB (via `langchain-chroma`) over a hosted vector DB:** file-based and zero-config, so the entire project runs without an external database dependency.
 - **Hand-written ingestion adapters, not LangChain's document loaders:** PDF/website/YouTube extraction is simple enough to own directly, keeping the ingestion layer fully transparent while still getting LangChain's benefit where it matters most, composing the retrieval-and-generation chain.
 - **Sentence-aware chunking over naive character splitting:** a hand-written recursive chunker that tries to avoid cutting mid-sentence, used for PDF and website content.
+- **GitHub Actions keep-alive over a third-party pinger:** Render's free tier spins down after 15 minutes of inactivity; a scheduled workflow living in the same repo keeps the backend awake without an external account, and doubles as a small piece of deployment automation worth explaining on its own.
 
 ---
 
@@ -98,6 +105,9 @@ This is the "runnables and chains" part of the project: `app/rag/chain.py` compo
 
 ```
 cirix/
+├── .github/
+│   └── workflows/
+│       └── keep-alive.yml    # scheduled ping to keep the Render backend awake
 ├── backend/
 │   ├── app/
 │   │   ├── api/            # upload.py, chat.py, sources.py - FastAPI routes
@@ -132,6 +142,7 @@ cirix/
 | GET | `/sources` | List all ingested sources |
 | DELETE | `/sources/{id}` | Remove one source and its chunks |
 | DELETE | `/sources` | Clear all sources, used for "start new session" |
+| GET | `/health` | Health check, also used to keep the deployed backend awake |
 
 ---
 
@@ -141,7 +152,9 @@ cirix/
 
 **Every upload gets a fresh `source_id`, with no deduplication.** Uploading the same file twice creates two separate entries. A "start new session" flow, shown as a welcome screen on first load and also available mid-app, clears all sources at once before a fresh batch of uploads, rather than deduplicating automatically.
 
-**No user isolation, by design.** There is no concept of separate users; all uploaded sources and all chat sessions share one global ChromaDB collection, and the welcome screen's reset clears state globally. This makes the app effectively single-user at a time, which is an accepted, explicit tradeoff for a local demo, not something that would be appropriate for a public multi-user deployment without adding real session/user scoping first.
+**No user isolation, by design.** There is no concept of separate users; all uploaded sources and all chat sessions share one global ChromaDB collection, and the welcome screen's reset clears state globally. This makes the app effectively single-user at a time, which is an accepted, explicit tradeoff for a public demo, not something that would be appropriate for a real multi-user deployment without adding real session/user scoping first.
+
+**Embeddings moved from local to API-based partway through the project.** The switch from a locally-loaded HuggingFace model to Gemini's embedding API was driven directly by deployment constraints (Render's free tier caps memory at 512MB, torch-based local models routinely exceed that even before handling a request), not a change in local development experience. Both approaches are valid; this project favors the one that actually fits the target hosting environment.
 
 ---
 
@@ -160,7 +173,7 @@ Create `backend/.env`:
 ```
 GEMINI_API_KEY=your_key_here
 ```
-Get a free key from [Google AI Studio](https://aistudio.google.com/apikey).
+Get a free key from [Google AI Studio](https://aistudio.google.com/apikey). This key is required for both the chat model and the embeddings API.
 
 Run it:
 ```powershell
@@ -191,3 +204,4 @@ Explicitly out of scope for v1, listed here rather than built:
 - **Streaming token-by-token responses:** answers currently return as a single completed response
 - **Real YouTube video titles:** currently uses a placeholder label (`YouTube video (video_id)`) rather than fetching the actual title, to avoid requiring a YouTube Data API key
 - **Migrating off `RunnableWithMessageHistory`:** it works correctly today but is deprecated as of LangChain 1.3.3 in favor of LangGraph's built-in persistence; not urgent since it isn't removed until LangChain 2.0.0
+- **Fully offline embeddings:** the current Gemini-based embeddings require network access and a valid API key; a local, memory-light embedding runtime (e.g. `fastembed`) would restore offline capability if a larger deployment memory budget isn't available

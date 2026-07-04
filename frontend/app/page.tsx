@@ -75,7 +75,12 @@ export default function Home() {
           />
         )}
 
-        <ChatPanel messages={messages} loading={chatLoading} onSend={ask} />
+        <ChatPanel
+          messages={messages}
+          loading={chatLoading}
+          hasSources={sources.length > 0}
+          onSend={ask}
+        />
 
         {/* Citations panel: fixed on desktop, slide-out drawer on mobile */}
         <div

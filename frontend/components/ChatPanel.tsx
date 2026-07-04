@@ -7,10 +7,11 @@ import MessageBubble from "./MessageBubble";
 interface Props {
   messages: ChatMessage[];
   loading: boolean;
+  hasSources: boolean;
   onSend: (question: string) => void;
 }
 
-export default function ChatPanel({ messages, loading, onSend }: Props) {
+export default function ChatPanel({ messages, loading, hasSources, onSend }: Props) {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -18,8 +19,10 @@ export default function ChatPanel({ messages, loading, onSend }: Props) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  const inputDisabled = loading || !hasSources;
+
   const handleSend = () => {
-    if (!input.trim() || loading) return;
+    if (!input.trim() || inputDisabled) return;
     onSend(input);
     setInput("");
   };
@@ -60,13 +63,13 @@ export default function ChatPanel({ messages, loading, onSend }: Props) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="type your question here..."
-            disabled={loading}
+            placeholder={hasSources ? "type your question here..." : "add a source first..."}
+            disabled={inputDisabled}
             className="flex-1 bg-transparent outline-none font-mono text-sm placeholder:text-text-dim disabled:opacity-50"
           />
           <button
             onClick={handleSend}
-            disabled={loading || !input.trim()}
+            disabled={inputDisabled || !input.trim()}
             className="px-4 py-1.5 bg-accent text-bg font-mono text-sm rounded-sm hover:opacity-90 transition-opacity disabled:opacity-40"
           >
             Send
