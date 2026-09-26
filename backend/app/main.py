@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import upload, chat, sources
@@ -24,3 +24,7 @@ app.include_router(sources.router)
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+@app.head("/health")
+def health_head():
+    return Response(status_code=200)
